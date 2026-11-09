@@ -6,7 +6,7 @@
 # Default history file: <this script's folder>/src/path_history.txt
 
 DIR="$(cd "$(dirname "$0")" && pwd -P)"
-HISTORY="${1:-$DIR/src/path_history.txt}"
+HISTORY="${1:-$DIR/path_history.txt}"
 
 if [ ! -f "$HISTORY" ]; then
     echo "clean: no history file at $HISTORY, nothing to do"
