@@ -1,0 +1,2 @@
+/home/wmillett/Projects/cyber_pisc/Arachnida/Spider/data
+/home/wmillett/Projects/cyber_pisc/Arachnida/Spider/test
