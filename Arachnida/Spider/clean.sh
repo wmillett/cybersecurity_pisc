@@ -3,7 +3,7 @@
 #         then wipe the history file.
 #
 # Usage: ./clean [HISTORY_FILE]
-# Default history file: <this script's folder>/src/path_history.txt
+# Default history file: <this script's folder>/path_history.txt
 
 DIR="$(cd "$(dirname "$0")" && pwd -P)"
 HISTORY="${1:-$DIR/path_history.txt}"
