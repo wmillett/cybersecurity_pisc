@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """scorpion - receives images as input and must parse them for EXIF and other metadata, displaying them on the screen.
 
-Usage: ./scorpion FILE1 [FILE2 ...]
+Usage: ./scorpion [-m TAG=VALUE] [-d TAG] [-s] [-b] FILE1 [FILE2 ...]
 
 File must be a valid image file (jpeg/jpg, png, gif, bmp).
+
+Bonus: -m / -d / -s modify or delete the metadata (see bonus.py).
 """
 
 import argparse
@@ -401,19 +403,60 @@ def process_file(path: str) -> None:
     print()
 
 
+def _assignment(text: str) -> tuple[str, str]:
+    name, sep, value = text.partition("=")
+    if not sep or not name.strip():
+        raise argparse.ArgumentTypeError(f"expected TAG=VALUE, got {text!r}")
+    return name.strip(), value
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="scorpion",
         description="Display EXIF and other metadata of image files "
                     "(jpeg/jpg, png, gif, bmp).")
     parser.add_argument("files", metavar="FILE", nargs="+", help="image file(s)")
+    group = parser.add_argument_group(
+        "bonus: modify / delete metadata (files are edited in place)")
+    group.add_argument("-m", "--modify", metavar="TAG=VALUE", action="append",
+                       type=_assignment, default=[],
+                       help="set a text tag, e.g. -m Artist=Anon "
+                            "(repeatable)")
+    group.add_argument("-d", "--delete", metavar="TAG", action="append",
+                       default=[],
+                       help="delete a tag, e.g. -d Make, -d GPS, -d Comment "
+                            "(repeatable)")
+    group.add_argument("-s", "--strip-all", action="store_true",
+                       help="remove all metadata")
+    group.add_argument("-b", "--backup", action="store_true",
+                       help="keep a FILE.bak copy before editing")
     args = parser.parse_args(argv)
+
+    editing = bool(args.modify or args.delete or args.strip_all)
+    if args.strip_all and (args.modify or args.delete):
+        parser.error("--strip-all cannot be combined with --modify/--delete")
+    if args.backup and not editing:
+        parser.error("--backup needs --modify, --delete or --strip-all")
+
+    bonus = None
+    errors: tuple = (OSError, MetadataError)
+    if editing:
+        try:
+            import bonus
+        except ImportError as error:
+            parser.error(f"bonus module unavailable ({error})")
+        errors += (bonus.EditError,)
 
     status = 0
     for path in args.files:
         try:
+            if editing:
+                for line in bonus.edit_file(
+                        path, sets=dict(args.modify), deletes=args.delete,
+                        strip_all=args.strip_all, backup=args.backup):
+                    print(f"scorpion: {path}: {line}")
             process_file(path)
-        except (OSError, MetadataError) as error:
+        except errors as error:
             print(f"scorpion: {path}: {error}", file=sys.stderr)
             status = 1
     return status
